@@ -43,14 +43,14 @@ echo ""
 tag2=`echo $2 | sed 's/\(.*\).txt/\1/'`
 #echo $tag2
 
-
-/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/$1 --mac 2 --max-mac 2 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - --keep ${inputFolder}/$2 --recode --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G  
+#this verion computes the doubletons using all the 853 individuals (mac2G)
+/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/$1 --mac 2 --max-mac 2 --recode --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G  
 
 /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${outputFolder}/fTwo/$tag1.$tag2.mac2G.recode.vcf --singletons --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G
 
 grep $'\t'D$'\t' ${outputFolder}/fTwo/$tag1.$tag2.mac2G.singletons | cut -d$'\t' -f1-2 > ${outputFolder}/fTwo/$tag1.$tag2.exclude
 
-
+#this excludes singletons or single individual doubletons
 /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${outputFolder}/fTwo/$tag1.$tag2.mac2G.recode.vcf --exclude-positions ${outputFolder}/fTwo/$tag1.$tag2.exclude --recode --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G.noDouble
 
 rm ${outputFolder}/fTwo/$tag1.$tag2.mac2G.recode.vcf
