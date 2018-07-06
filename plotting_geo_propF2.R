@@ -26,6 +26,7 @@ par(mfrow=c(1,2), mar=c(4,4,2,2))
 for (rowNb in 1:nrow(dist_m)) {
   
   #rowNb <- 1
+  #computing the relative difference of allele sharing
   m_tmp[[rowNb]] <- rbind(abs(dist_m[rowNb,]-dist_m[rowNb,rowNb])/dist_m[rowNb,rowNb], geo_m[rowNb,])
   if (rowNb == 1) {
     
