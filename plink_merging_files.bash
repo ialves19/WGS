@@ -22,6 +22,7 @@
 #setting the sart of the job
 res1=$(date +%s.%N)
 
+chrID=$1
 wkingDir="/mnt/beegfs/ialves"
 inputFolder="/mnt/beegfs/ialves/vcf_ancestral"
 
@@ -42,27 +43,37 @@ prefixName="20180323.FRENCHWGS.REF0002"
 #sufixName="onlysnps.downsampled"
 sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
 
-for file in ${wkingDir}/plink/relatedness/*.bed;
+for i in `seq 1 22`;
 do
-    fileName=`echo $file | sed s/.*.bed/\1/`
+    fileName=`ls ${outputFolder}/*chr${i}.*.pruned.bed`
+    echo $fileName
+    prefixFName=`echo $fileName | sed 's/\(.*\).bed/\1/'`
+    echo $prefixFName
 
-    echo $fileName.bed$' '$fileName.bim$' '$fileName.fam >> ${wkingDir}/plink/relatedness/fileList.txt
+    echo $prefixFName.bed$' '$prefixFName.bim$' '$prefixFName.fam >> ${wkingDir}/plink/relatedness/fileList_tmp.txt
 done
+sed '1d' ${wkingDir}/plink/relatedness/fileList_tmp.txt >> ${wkingDir}/plink/relatedness/fileList.txt
+rm ${wkingDir}/plink/relatedness/fileList_tmp.txt
 
 ##########################
 ### Merge all files    ###
 ##########################
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --merge-list ${wkingDir}/plink/relatedness/fileList.txt \
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${wkingDir}/plink/relatedness/fileList.txt \
 --make-bed --out ${outputFolder}/${prefixName}.all
 
-##################################
-### Replace "." with CHROM:POS ###
-##################################
-cat ${outputFolder}/${outputFolder}/${prefixName}.all.bim | awk '{if($2 =="."){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/${prefixName}.all.bis.bim
-mv ${outputFolder}/${prefixName}.all.bis.bim ${outputFolder}/${prefixName}.all.bim
+rm ${outputFolder}/ld.chr*.*
+rm ${outputFolder}/plink.chr*.*
+rm ${outputFolder}/*hwe1e4.maxmiss.90.bed
+rm ${outputFolder}/*hwe1e4.maxmiss.90.bim
+rm ${outputFolder}/*hwe1e4.maxmiss.90.fam
+rm ${outputFolder}/*hwe1e4.maxmiss.90.log
 
-
-
+###########################
+### IBS matrix creation ###
+###########################
+# IBS summarizes if samples are related
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --genome --out ${outputFolder}/matriceIBS
+cat ${outputFolder}/matriceIBS.genome | awk '$10 > 0.1' > ${outputFolder}/relatedSamples.txt
 
 #timing the job
 res2=$(date +%s.%N)
