@@ -43,10 +43,34 @@ prefixName="20180323.FRENCHWGS.REF0002"
 #sufixName="onlysnps.downsampled"
 sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
 
+##############################
+### Exclude sites MAF <0.1 ###
+##############################
+/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf --maf 0.1 \
+ --recode --recode-INFO-all --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.1
+
+
 ##########################
 ### Convert VCF to BED ###
 ##########################
-/commun/data/packages/plink/plink-1.9.0/plink --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf --vcf-filter --make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}
+/commun/data/packages/plink/plink-1.9.0/plink --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.1.recode.vcf --vcf-filter \
+--make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}
+
+##################################
+### Replace "." with CHROM:POS ###
+##################################
+cat ${outputFolder}/${prefixName}.$chrID.${sufixName}.bim | awk '{if($2 =="."){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/${prefixName}.$chrID.${sufixName}.bis.bim
+mv ${outputFolder}/${prefixName}.$chrID.${sufixName}.bis.bim ${outputFolder}/${prefixName}.$chrID.${sufixName}.bim
+
+#######################
+### Quality control ###
+#######################
+# Hardy-Weinberg equilibrum at 1e-04, --bfile to specify that the input data are in binary format
+# Réduction aux SNP indépendants en deux étapes (LD pruning)
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --indep-pairwise 50 5 0.2 --out ${outputFolder}/plink.$chrID
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --r2 --ld-window 500 --ld-window-kb 10000 --ld-window-r2 0.2 --out ${outputFolder}/ld.$chrID
+
 
 
 #timing the job
