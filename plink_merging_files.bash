@@ -23,6 +23,8 @@
 res1=$(date +%s.%N)
 
 chrID=$1
+methodType=$2
+
 wkingDir="/mnt/beegfs/ialves"
 inputFolder="/mnt/beegfs/ialves/vcf_ancestral"
 
@@ -31,13 +33,25 @@ if [ ! -d "${wkingDir}/plink" ];
         mkdir ${wkingDir}/plink
 fi
 
-if [ ! -d "${wkingDir}/relatedness" ]; 
+if [ "$methodType" == "relatedness" ]; 
     then
-        mkdir ${wkingDir}/plink/relatedness
+
+    if [ ! -d "${wkingDir}/relatedness" ]; 
+        then
+            mkdir ${wkingDir}/plink/relatedness
+            outputFolder="${wkingDir}/plink/relatedness"
+            echo "Mode: $methodType" 
+    fi
+elif [ "$methodType" == "pca" ];
+    then 
+    if [ ! -d "${wkingDir}/pca" ]; 
+        then
+            mkdir ${wkingDir}/plink/pca
+            outputFolder="${wkingDir}/plink/pca"
+            echo "Mode: $methodType" 
+    fi
 fi
 
-
-outputFolder="${wkingDir}/plink/relatedness"
 
 prefixName="20180323.FRENCHWGS.REF0002"
 #sufixName="onlysnps.downsampled"
@@ -50,15 +64,15 @@ do
     prefixFName=`echo $fileName | sed 's/\(.*\).bed/\1/'`
     echo $prefixFName
 
-    echo $prefixFName.bed$' '$prefixFName.bim$' '$prefixFName.fam >> ${wkingDir}/plink/relatedness/fileList_tmp.txt
+    echo $prefixFName.bed$' '$prefixFName.bim$' '$prefixFName.fam >> ${outputFolder}/fileList_tmp.txt
 done
-sed '1d' ${wkingDir}/plink/relatedness/fileList_tmp.txt >> ${wkingDir}/plink/relatedness/fileList.txt
-rm ${wkingDir}/plink/relatedness/fileList_tmp.txt
+sed '1d' ${outputFolder}/fileList_tmp.txt >> ${outputFolder}/fileList.txt
+rm ${outputFolder}/fileList_tmp.txt
 
 ##########################
 ### Merge all files    ###
 ##########################
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${wkingDir}/plink/relatedness/fileList.txt \
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${outputFolder}/fileList.txt \
 --make-bed --out ${outputFolder}/${prefixName}.all
 
 rm ${outputFolder}/ld.chr*.*
@@ -68,12 +82,39 @@ rm ${outputFolder}/*hwe1e4.maxmiss.90.bim
 rm ${outputFolder}/*hwe1e4.maxmiss.90.fam
 rm ${outputFolder}/*hwe1e4.maxmiss.90.log
 
-###########################
-### IBS matrix creation ###
-###########################
-# IBS summarizes if samples are related
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --genome --out ${outputFolder}/matriceIBS
-cat ${outputFolder}/matriceIBS.genome | awk '$10 > 0.1' > ${outputFolder}/relatedSamples.txt
+if [ "${methodType}" == "relatedness" ];
+    then
+    ###########################
+    ### IBS matrix creation ###
+    ###########################
+    # IBS summarizes if samples are related
+    /commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.all --genome --out ${outputFolder}/matriceIBS
+    cat ${outputFolder}/matriceIBS.genome | awk '$10 > 0.1' > ${outputFolder}/relatedSamples.txt
+
+elif [ "${methodType}" == "pca" ]; 
+    then
+
+    cp ${outputFolder}/${prefixName}.all.fam ${outputFolder}/${prefixName}.all.pedind 
+    #######################
+    ### Create inputfile###
+    #######################
+    (
+    echo "genotypename:  ${outputFolder}/${prefixName}.all.bed"
+    echo "snpname:  ${outputFolder}/${prefixName}.all.bim"
+    echo "indivname:  ${outputFolder}/${prefixName}.all.pedind" #(<--- which is the XXX.fam renamed)
+    echo "evecoutname: ${outputFolder}/WGS.evec"
+    echo "evaloutname: ${outputFolder}/WGS.eval"
+    echo "deletesnpoutname: EIG_removed_SNPs"
+    echo "numoutevec: 10"
+    echo "fsthiprecision: YES"
+    ) > ${outputFolder}/smarpca.WGS.txt
+
+    #######################
+    ### PCA ###
+    #######################
+    /commun/data/users/ialves/EIG-6.1.4/bin/smartpca -p ${outputFolder}/smarpca.WGS.txt > ${outputFolder}/logfile.txt
+
+fi        
 
 #timing the job
 res2=$(date +%s.%N)
