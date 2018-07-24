@@ -75,12 +75,12 @@ rm ${outputFolder}/fileList_tmp.txt
 /commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${outputFolder}/fileList.txt \
 --make-bed --out ${outputFolder}/${prefixName}.all
 
-rm ${outputFolder}/ld.chr*.*
-rm ${outputFolder}/plink.chr*.*
-rm ${outputFolder}/*hwe1e4.maxmiss.90.bed
-rm ${outputFolder}/*hwe1e4.maxmiss.90.bim
-rm ${outputFolder}/*hwe1e4.maxmiss.90.fam
-rm ${outputFolder}/*hwe1e4.maxmiss.90.log
+#rm ${outputFolder}/ld.chr*.*
+#rm ${outputFolder}/plink.chr*.*
+# rm ${outputFolder}/*hwe1e4.maxmiss.90.bed
+# rm ${outputFolder}/*hwe1e4.maxmiss.90.bim
+# rm ${outputFolder}/*hwe1e4.maxmiss.90.fam
+# rm ${outputFolder}/*hwe1e4.maxmiss.90.log
 
 if [ "${methodType}" == "relatedness" ];
     then
