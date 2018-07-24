@@ -46,15 +46,22 @@ sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
 ##############################
 ### Exclude sites MAF <0.1 ###
 ##############################
-/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
---keep ${wkingDir}/plink/indvs_to_keep.txt --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - --maf 0.05 \
---recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.subset25.maf0.05
-
+if [ "$chrID" == "chr6"]; #Zabaneh et al 2016 Scientific reports
+    then
+    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
+    --not-chr chr6 --from-bp 29691116 --to-bp 33054976 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - \
+    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - \
+    --keep ${wkingDir}/plink/indvs_to_keep.txt --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset25
+else 
+    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
+    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - --keep ${wkingDir}/plink/indvs_to_keep.txt \
+    --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset25
+fi
 
 ##########################
 ### Convert VCF to BED ###
 ##########################
-/commun/data/packages/plink/plink-1.9.0/plink --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.subset25.maf0.05.recode.vcf --vcf-filter \
+/commun/data/packages/plink/plink-1.9.0/plink --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset25.recode.vcf --vcf-filter \
 --make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}
 
 ##################################
@@ -70,7 +77,7 @@ mv ${outputFolder}/${prefixName}.$chrID.${sufixName}.bis.bim ${outputFolder}/${p
 # Réduction aux SNP indépendants en deux étapes (LD pruning)
 /commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --indep-pairwise 50 5 0.5 --out ${outputFolder}/plink.$chrID
 /commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --r2 --ld-window 500 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --r2 --ld-window 10 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
 
 
 
