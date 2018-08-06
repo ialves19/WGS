@@ -44,7 +44,7 @@ tag2=`echo $2 | sed 's/\(.*\).txt/\1/'`
 #echo $tag2
 
 #this verion computes the doubletons using all the 853 individuals (mac2G)
-/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/$1 --mac 2 --max-mac 2 --max-missing 1 --recode --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G  
+/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/vcf_ancestral/$1 --mac 2 --max-mac 2 --max-missing 1 --recode --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G  
 
 /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${outputFolder}/fTwo/$tag1.$tag2.mac2G.recode.vcf --singletons --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G
 
