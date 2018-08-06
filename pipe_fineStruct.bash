@@ -1,3 +1,5 @@
+#!/bin/sh
+
 export PERL5LIB=/usr/share/perl5
 
 
@@ -14,6 +16,8 @@ cp -r /mnt/beegfs/genetic_map .
 
 #into /mnt/beegfs/ialves/fs_WGS/genetic_map
 cd ${workDir}/genetic_map
+
+projName="french_wgs"
 
 #########################
 # transforms the recombination map files from SHAPEit 
@@ -48,29 +52,172 @@ rm -f $cmdfile
 cp /commun/data/users/ialves/fs-2.1.3/scripts/impute2chromopainter.pl .
 cp /commun/data/users/ialves/fs-2.1.3/scripts/convertrecfile.pl .
 cp /commun/data/users/ialves/fs-2.1.3/fs . 
-for chr in `seq 21 22`; do
+for chr in `seq 1 22`; do
 cmdf="getdata/getdata_chr$chr.sh"
 echo "#!/bin/sh" > $cmdf
 echo ""  >> $cmdf
 echo "#$ -S /bin/bash" >> $cmdf
 echo "#$ -cwd" >> $cmdf
-echo "#$ -N cp_\$JOB_ID" >> $cmdf
-echo "#$ -o cp_o_\$JOB_ID" >> $cmdf
-echo "#$ -e cp_e_\$JOB_ID" >> $cmdf
+echo "#$ -N gd_\$JOB_ID" >> $cmdf
+echo "#$ -o gd_o_\$JOB_ID" >> $cmdf
+echo "#$ -e gd_e_\$JOB_ID" >> $cmdf
 echo "#$ -m a" >> $cmdf
 echo "#$ -M Isabel.Alves@univ-nantes.fr" >> $cmdf
 echo "" >> $cmdf
-echo "runDir=\"/commun/data/users/ialves/fs_example\"" >> $cmdf
+echo "export PERL5LIB=/usr/share/perl5" >> $cmdf
+echo "runDir=\"$workDir\"" >> $cmdf
 echo "" >> $cmdf
 echo "cd \$runDir" >> $cmdf
 echo "" >> $cmdf
+echo "chmod +x ${workDir}/impute2chromopainter.pl"
+echo "chmod +x ${workDir}/convertrecfile.pl"
 echo "cp ${folderSCRATCH}/phase/20180323.FRENCHWGS.REF0002.mac2.chr${chr}.phased.haps getdata/" >> $cmdf
-echo "cp ${workDir}/genetic_map/genetic_map_chr${chr}_combined_b37.txt getdata/" >> $cmdf
-echo "perl impute2chromopainter.pl getdata/20180323.FRENCHWGS.REF0002.mac2.chr${chr}.phased.haps getdata/20180323.FRENCHWGS.REF0002.mac2.chr${chr}.phased.cp.haps" >> $cmdf
-echo "perl convertrecfile.pl -M hapmap getdata/20180323.FRENCHWGS.REF0002.mac2.chr${chr}.phased.cp.haps genetic_map/genetic_map_chr${chr}_combined_b37.txt getdata/chrom${chr}.recombfile" >> $cmdf
+echo "perl ${workDir}/impute2chromopainter.pl getdata/20180323.FRENCHWGS.REF0002.mac2.chr${chr}.phased.haps getdata/chr${chr}.phased.cp.haps" >> $cmdf
+echo "perl ${workDir}/convertrecfile.pl -M hapmap getdata/chr${chr}.phased.cp.haps.phase genetic_map/genetic_map_chr${chr}_combined_b37.txt getdata/chrom${chr}.recombfile" >> $cmdf
+
 chmod +x $cmdf
-echo "qsub $cmdf" >> $cmdfile
+qsub $cmdf
 done
 
-chmod +x $cmdfile
-./$cmdfile
+declare -a PHASENAMES;
+declare -a RECOMBNAMES;
+CHROMS=( 4 10 15 22 )
+
+for chrID in "${CHROMS[@]}";
+	do 
+	PHASENAMES[$chrID]="getdata/chr$chrID.phased.cp.haps.phase"
+	RECOMBNAMES[$chrID]="getdata/chrom$chrID.recombfile"
+done
+
+# Generating command lines for stage one - estimating Ne and mu
+genComStageOne="genCommStgOne.sh"
+echo "#!/bin/sh" > $genComStageOne
+echo "cd $workDir" >> $genComStageOne
+echo "./fs $projName.cp -n -phasefiles ${PHASENAMES[*]} -recombfiles ${RECOMBNAMES[*]} \
+-idfile WGS_france_coco.ids -hpc 1 -s1indfrac 0.1 -go" >> $genComStageOne
+
+chmod +x $genComStageOne
+qsub -hold_jid "gd_*" -N gcO -cwd $genComStageOne
+
+#################
+##
+## stage 1
+##
+#################
+
+#splitting command lines
+splitComLStageOne="splitComLineStgO.sh"
+echo "#!/bin/sh" > $splitComLStageOne
+echo "cd ${workDir}/${projName}/commandfiles" >> $splitComLStageOne
+echo "split -l 20 commandfile1.txt commandSub-" >> $splitComLStageOne
+
+chmod +x $splitComLStageOne
+qsub -hold_jid "gcO" -N stgOne -cwd $splitComLStageOne
+
+
+echo "#$ -S /bin/sh"  > ${workDir}/tmp.sh
+echo "#$ -cwd"  >> ${workDir}/tmp.sh
+echo "#$ -N stO_\$JOB_ID" >> ${workDir}/tmp.sh
+echo "#$ -o stO_o_\$JOB_ID" >> ${workDir}/tmp.sh
+echo "#$ -e stO_e_\$JOB_ID" >> ${workDir}/tmp.sh
+echo "#$ -m a" >> ${workDir}/tmp.sh
+echo "#$ -M Isabel.Alves@univ-nantes.fr" >> ${workDir}/tmp.sh
+echo "" >> ${workDir}/tmp.sh
+echo "runDir=${workDir}" >> ${workDir}/tmp.sh
+echo "" >> ${workDir}/tmp.sh
+echo "cd \$runDir" >> ${workDir}/tmp.sh
+echo "" >> ${workDir}/tmp.sh
+
+launchStageOne="lauchingStgOne.sh"
+echo '#!/bin/sh' > $launchStageOne
+echo "" >> $launchStageOne
+echo "cd ${workDir}/${projName}/commandfiles" >> $launchStageOne
+echo "COUNT=0" >> $launchStageOne
+echo "for fileCom in commandSub-*;" >> $launchStageOne
+echo "do" >> $launchStageOne
+echo -e "\tlet COUNT++;" >> $launchStageOne
+echo -e "\tqsubName=\"qsub_\$COUNT.sh\"" >> $launchStageOne
+echo -e "\tcp ${workDir}/tmp.sh ." >> $launchStageOne
+echo -e "\tmv tmp.sh \$qsubName" >> $launchStageOne
+echo "echo \"#running file \$fileCom >> \$qsubName\"" >> $launchStageOne
+echo -e "\tsed 's/fs/\\.\/fs/g' \$fileCom >> \$qsubName" >> $launchStageOne
+echo -e "\trm \$fileCom" >> $launchStageOne
+echo "done" >> $launchStageOne
+echo -e "\tmv *.sh ${workDir}/" >> $launchStageOne 
+
+
+chmod +x $launchStageOne
+qsub -hold_jid "gcO" -S /bin/sh -N lsO -cwd $launchStageOne
+chmod +x qsub_*
+
+jobNb="ls qsub_* | wc -l"
+for jobs in `seq 1 $jobNb`; 
+do
+	qsub -hold_jid "lsO" -S /bin/sh -N stO -cwd qsub_$jobs.sh
+done
+
+################## End of stage one
+##------------
+#-------
+
+
+#################
+##
+## stage 2
+##
+#################
+declare -a PHASENAMES;
+declare -a RECOMBNAMES;
+CHROMS=( {1..22} )
+
+for chrID in "${CHROMS[@]}";
+	do 
+	PHASENAMES[$chrID]="getdata/chr$chrID.phased.cp.haps.phase"
+	RECOMBNAMES[$chrID]="getdata/chrom$chrID.recombfile"
+done
+
+
+fs french_wgs.cp -duplicate 1 french_wgs_new.cp -PHASEFILES ${PHASENAMES[*]}
+fs french_wgs_new.cp -recombfiles ${RECOMBNAMES[*]}
+
+ne=`grep Neinf french_wgs.cp | cut -d$' ' -f1`
+mu=`grep muinf french_wgs.cp | cut -d$' ' -f1`
+
+sed -i s/Neinf:-1/$ne/g french_wgs_new.cp
+sed -i s/muinf:-1/$mu/g french_wgs_new.cp
+
+# Generating command lines for stage two - chromosome paiting
+genComStageTwo="genCommStgTwo.sh"
+echo '#!/bin/sh' > $genComStageTwo
+echo "cd $workDir" >> $genComStageTwo
+echo "./fs ${projName}_new.cp -indsperproc 100 -go" >> $genComStageTwo
+
+chmod +x $genComStageTwo
+qsub -hold_jid "stO" -N stgTwo -cwd $genComStageTwo
+
+#splitting command lines
+splitComLStageTwo="splitComLineStgT.sh"
+echo "#!/bin/sh" > $splitComLStageTwo
+echo "cd ${workDir}/${projName}_new/commandfiles" >> $splitComLStageTwo
+echo "split -l 2 commandfile2.txt commandSample-" >> $splitComLStageTwo
+
+chmod +x $splitComLStageTwo
+
+sed -i s/stO/stT/g tmp.sh
+
+launchStageTwo="lauchingStgTwo.sh"
+echo '#!/bin/sh' > $launchStageTwo
+echo "" >> $launchStageTwo
+echo "cd ${workDir}/${projName}_new/commandfiles" >> $launchStageTwo
+echo "COUNT=0" >> $launchStageTwo
+echo "for fileCom in commandSample-*;" >> $launchStageTwo
+echo "do" >> $launchStageTwo
+echo -e "\tlet COUNT++;" >> $launchStageTwo
+echo -e "\tqsubName=\"qsub_\$COUNT.sh\"" >> $launchStageTwo
+echo -e "\tcp ${workDir}/tmp.sh ." >> $launchStageTwo
+echo -e "\tmv tmp.sh \$qsubName" >> $launchStageTwo
+echo "echo \"#running file \$fileCom >> \$qsubName\"" >> $launchStageTwo
+echo -e "\tsed 's/fs/\\.\/fs/g' \$fileCom >> \$qsubName" >> $launchStageTwo
+echo -e "\trm \$fileCom" >> $launchStageTwo
+echo "done" >> $launchStageTwo
+echo -e "\tmv *.sh ${workDir}/" >> $launchStageTwo 
