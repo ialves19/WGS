@@ -66,7 +66,7 @@ do
 
     echo $prefixFName.bed$' '$prefixFName.bim$' '$prefixFName.fam >> ${outputFolder}/fileList_tmp.txt
 done
-sed '1d' ${outputFolder}/fileList_tmp.txt >> ${outputFolder}/fileList.txt
+sed '1d' ${outputFolder}/fileList_tmp.txt > ${outputFolder}/fileList.txt
 rm ${outputFolder}/fileList_tmp.txt
 
 ##########################
