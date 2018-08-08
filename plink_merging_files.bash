@@ -12,10 +12,10 @@
 ##
 ##
 ## This script needs to be launched with the following command:
-## for i in `seq 1 22`; do cp pipe_compute_afreq.bash pipe_compute_afreq.chr$i.bash;
-## sed -i s/CHRID/$i/ pipe_compute_f2.chr$i.bash;
-## qsub pipe_compute_f2.chr$i.bash; ARG1 ARG2
-## done
+## 
+## 
+## qsub plink_merging_files.bash chr1 relatedness/pca
+## 
 #####################
 
 
