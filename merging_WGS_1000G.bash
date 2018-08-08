@@ -17,8 +17,8 @@ vcfFile=$1
 
 #module load tabix
 
-/commun/data/packages/tabix-0.2.6/bgzip $inputFolder/vcf_ancestral/$vcfFile
-/commun/data/packages/tabix-0.2.6/tabix -p vcf $inputFolder/vcf_ancestral/$vcfFile.gz
+#/commun/data/packages/tabix-0.2.6/bgzip $inputFolder/vcf_ancestral/$vcfFile
+#/commun/data/packages/tabix-0.2.6/tabix -p vcf $inputFolder/vcf_ancestral/$vcfFile.gz
 
 if [ ! -d "${inputFolder}/1000G" ]; 
 	then
@@ -28,12 +28,14 @@ fi
 chrID=`echo $vcfFile | sed 's/.*\(chr[0-9]*\).*/\1/'`
 echo "Merging chromosome: $chrID"
 
-/commun/data/packages/samtools/1.4/bcftools-1.4/bcftools merge -f PASS $inputFolder/vcf_ancestral/${vcfFile}.gz \
-/commun/data/pubdb/ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.${chrID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O v \
--o ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS
+#/commun/data/packages/samtools/1.4/bcftools-1.4/bcftools merge -f PASS $inputFolder/vcf_ancestral/${vcfFile}.gz \
+#/commun/data/pubdb/ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.${chrID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O v \
+#-o ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS
 
 echo "Process finished"
 
+/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS --keep ${inputFolder}/1000G/FR_1000G_EURsamples.txt \
+--recode --recode-INFO-all --out ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS.FR.IBS.GBR.TSI
 
 
 #timing the job
