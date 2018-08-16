@@ -53,13 +53,13 @@ elif [ "$methodType" == "pca" ];
 fi
 
 
-prefixName="20180323.FRENCHWGS.REF0002"
+prefixName="merged.WGS.1000G"
 #sufixName="onlysnps.downsampled"
-sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
+sufixName="PASS.FR.IBS.GBR.TSI"
 
 for i in `seq 1 22`;
 do
-    fileName=`ls ${outputFolder}/*chr${i}.*.pruned.bed`
+    fileName=`ls ${outputFolder}/*chr${i}.*.pruned.bis.bis.bed`
     echo $fileName
     prefixFName=`echo $fileName | sed 's/\(.*\).bed/\1/'`
     echo $prefixFName
@@ -73,7 +73,7 @@ rm ${outputFolder}/fileList_tmp.txt
 ### Merge all files    ###
 ##########################
 /commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${outputFolder}/fileList.txt \
---make-bed --out ${outputFolder}/${prefixName}.all
+--make-bed --keep-allele-order --out ${outputFolder}/${prefixName}.all
 
 #rm ${outputFolder}/ld.chr*.*
 #rm ${outputFolder}/plink.chr*.*
