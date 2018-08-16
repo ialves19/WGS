@@ -17,8 +17,8 @@ vcfFile=$1
 
 #module load tabix
 
-#/commun/data/packages/tabix-0.2.6/bgzip $inputFolder/vcf_ancestral/$vcfFile
-#/commun/data/packages/tabix-0.2.6/tabix -p vcf $inputFolder/vcf_ancestral/$vcfFile.gz
+# /commun/data/packages/tabix-0.2.6/bgzip $inputFolder/vcf_ancestral/$vcfFile
+# /commun/data/packages/tabix-0.2.6/tabix -p vcf $inputFolder/vcf_ancestral/$vcfFile.gz
 
 if [ ! -d "${inputFolder}/1000G" ]; 
 	then
@@ -26,16 +26,38 @@ if [ ! -d "${inputFolder}/1000G" ];
 fi
 
 chrID=`echo $vcfFile | sed 's/.*\(chr[0-9]*\).*/\1/'`
+chrNb=`echo $vcfFile | sed 's/.*chr\([0-9]*\).*/\1/'`
+
 echo "Merging chromosome: $chrID"
 
-#/commun/data/packages/samtools/1.4/bcftools-1.4/bcftools merge -f PASS $inputFolder/vcf_ancestral/${vcfFile}.gz \
-#/commun/data/pubdb/ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.${chrID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O v \
-#-o ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS
+#keep biallelic sites in the 1000G vcf & keeping only GBR, IBS and TSU & replacing chr tag and zipping
+/commun/data/packages/samtools/1.4/bcftools-1.4/bcftools view -m2 -M2 -v snps -f PASS \
+/commun/data/pubdb/ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.${chrID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -Ou \
+| /commun/data/packages/samtools/1.4/bcftools-1.4/bcftools view -S ${inputFolder}/1000G/1000G_EURsamples.txt -O v | sed s/^$chrNb/$chrID/g | \
+/commun/data/packages/tabix-0.2.6/bgzip -c > $inputFolder/vcf_ancestral/1000G.clean.${chrID}.vcf.gz
 
-echo "Process finished"
+# indexing files
+/commun/data/packages/tabix-0.2.6/tabix -p vcf $inputFolder/vcf_ancestral/1000G.clean.${chrID}.vcf.gz
 
-/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS --keep ${inputFolder}/1000G/FR_1000G_EURsamples.txt \
---recode --recode-INFO-all --out ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS.FR.IBS.GBR.TSI
+# checking common sites 
+/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf $inputFolder/vcf_ancestral/${vcfFile}.gz --gzdiff $inputFolder/vcf_ancestral/1000G.clean.${chrID}.vcf.gz --out ${inputFolder}/1000G/out.${chrID}
+
+grep $'\t'B$'\t' ${inputFolder}/1000G/out.${chrID}.diff.sites_in_files | cut -d$'\t' -f1,2 > ${inputFolder}/1000G/common.sites.${chrID}.txt
+
+#merging 1000G and Fr WGS
+/commun/data/packages/samtools/1.4/bcftools-1.4/bcftools merge -f PASS $inputFolder/vcf_ancestral/${vcfFile}.gz \
+$inputFolder/vcf_ancestral/1000G.clean.${chrID}.vcf.gz -Ou | /commun/data/packages/samtools/1.4/bcftools-1.4/bcftools view -m2 -M2 \
+-O v -o ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS.vcf
+
+echo "Merging finished"
+
+#keeping only sites common to FR WGS and 1000G in the merged 
+/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS.vcf --positions ${inputFolder}/1000G/common.sites.${chrID}.txt \
+--recode --out ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS.FR.IBS.GBR.TSI
+
+rm ${inputFolder}/1000G/merged.WGS.1000G.${chrID}.PASS.vcf
+rm $inputFolder/vcf_ancestral/1000G.clean.${chrID}.vcf.gz
+
 
 
 #timing the job
