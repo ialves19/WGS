@@ -22,7 +22,7 @@ res1=$(date +%s.%N)
 
 chrID=$1
 wkingDir="/mnt/beegfs/ialves"
-inputFolder="/mnt/beegfs/ialves/1000G"
+inputFolder="/mnt/beegfs/ialves/vcf_ancestral"
 
 if [ ! -d "${wkingDir}/plink" ]; 
     then
@@ -37,27 +37,29 @@ fi
 
 outputFolder="${wkingDir}/plink/pca"
 
-prefixName="merged.WGS.1000G"
+prefixName="20180323.FRENCHWGS.REF0002"
 #sufixName="onlysnps.downsampled"
-sufixName="PASS.FR.IBS.GBR.TSI"
+sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
 
 ##############################
 ### Exclude sites MAF <0.1 ###
 ##############################
 if [ "$chrID" == "chr6"]; #Zabaneh et al 2016 Scientific reports
     then
-    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
-    --not-chr chr6 --from-bp 29691116 --to-bp 33054976 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - \
-    --maf 0.01 --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.ALL
+    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
+    --not-chr chr6 --from-bp 29691116 --to-bp 33054976 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - \
+    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - \
+    --keep ${wkingDir}/plink/indvs_to_keep.txt --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100
 else 
-    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
-    --maf 0.01 --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.ALL
+    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
+    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - --keep ${wkingDir}/plink/indvs_to_keep.txt \
+    --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100
 fi
 
 ##########################
 ### Convert VCF to BED ###
 ##########################
-/commun/data/packages/plink/plink-1.9.0/plink --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.ALL.recode.vcf --vcf-filter \
+/commun/data/packages/plink/plink-1.9.0/plink --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100.recode.vcf --vcf-filter \
 --make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}
 
 ##################################
