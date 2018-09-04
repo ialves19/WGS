@@ -53,13 +53,13 @@ elif [ "$methodType" == "pca" ];
 fi
 
 
-prefixName="merged.WGS.1000G"
+prefixName="20180323.FRENCHWGS.REF0002"
 #sufixName="onlysnps.downsampled"
-sufixName="PASS.FR.IBS.GBR.TSI"
+sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
 
 for i in `seq 1 22`;
 do
-    fileName=`ls ${outputFolder}/*chr${i}.*.pruned.bis.bis.bed`
+    fileName=`ls ${outputFolder}/*chr${i}.*.pruned.bed`
     echo $fileName
     prefixFName=`echo $fileName | sed 's/\(.*\).bed/\1/'`
     echo $prefixFName
