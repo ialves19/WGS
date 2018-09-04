@@ -221,3 +221,58 @@ echo -e "\tsed 's/fs/\\.\/fs/g' \$fileCom >> \$qsubName" >> $launchStageTwo
 echo -e "\trm \$fileCom" >> $launchStageTwo
 echo "done" >> $launchStageTwo
 echo -e "\tmv *.sh ${workDir}/" >> $launchStageTwo 
+
+
+# Generating command lines for stage two - chromosome paiting
+genComStageThree="genCommStgThree.sh"
+echo '#!/bin/sh' > $genComStageThree
+echo "cd $workDir" >> $genComStageThree
+echo "./fs ${projName}_new.cp -s3iters 2000000 -go" >> $genComStageThree
+
+# Generating command lines for stage two - chromosome paiting
+genAfterStageThree="genAfterStgThree.sh"
+echo '#!/bin/sh' > $genAfterStageThree
+echo "cd $workDir" >> $genAfterStageThree
+echo "./fs ${projName}_new.cp -go" >> $genAfterStageThree
+
+
+
+##STEP FOUR
+#splitting command lines for tree construction step 4
+splitComFStageFour="splitComFStageFour.sh"
+echo "#!/bin/sh" > $splitComFStageFour
+echo "cd ${workDir}/${projName}_new/commandfiles" >> $splitComFStageFour
+echo "split -l 1 commandfile4.txt commandSample-" >> $splitComFStageFour
+
+chmod +x $splitComFStageFour
+
+sed -i s/stT/stF/g tmp.sh
+
+launchStageFour="launchStageFour.sh"
+echo '#!/bin/sh' > $launchStageFour
+echo "" >> $launchStageFour
+echo "cd ${workDir}/${projName}_new/commandfiles" >> $launchStageFour
+echo "COUNT=0" >> $launchStageFour
+echo "for fileCom in commandSample-*;" >> $launchStageFour
+echo "do" >> $launchStageFour
+echo -e "\tlet COUNT++;" >> $launchStageFour
+echo -e "\tqsubName=\"job_fs_stage4_\$COUNT.sh\"" >> $launchStageFour
+echo -e "\tcp ${workDir}/tmp.sh ." >> $launchStageFour
+echo -e "\tmv tmp.sh \$qsubName" >> $launchStageFour
+echo "echo \"#running file \$fileCom >> \$qsubName\"" >> $launchStageFour
+echo -e "\tsed 's/^fs/\\.\/fs/g' \$fileCom >> \$qsubName" >> $launchStageFour
+echo -e "\trm \$fileCom" >> $launchStageFour
+echo "done" >> $launchStageFour
+echo -e "\tmv *.sh ${workDir}/" >> $launchStageFour 
+
+chmod +x $launchStageFour
+
+qsub -N step4 -cwd -S /bin/sh $launchStageFour 
+
+# Generating command lines for stage two - chromosome paiting
+genAfterStageFour="genAfterStageFour.sh"
+echo '#!/bin/sh' > $genAfterStageFour
+echo "cd $workDir" >> $genAfterStageFour
+echo "./commun/data/users/ialves/fs-2.1.3/fs ${projName}.cp -go" >> $genAfterStageFour
+
+
