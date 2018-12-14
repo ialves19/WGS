@@ -22,7 +22,7 @@ res1=$(date +%s.%N)
 
 chrID=$1
 wkingDir="/mnt/beegfs/ialves"
-inputFolder="/mnt/beegfs/ialves/vcf_ancestral"
+inputFolder="/mnt/beegfs/ialves/1000G"
 
 if [ ! -d "${wkingDir}/plink" ]; 
     then
@@ -37,22 +37,22 @@ fi
 
 outputFolder="${wkingDir}/plink/pca"
 
-prefixName="20180323.FRENCHWGS.REF0002"
+prefixName="merged.WGS.FR_1000G_goNL"
 #sufixName="onlysnps.downsampled"
-sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
+sufixName="PASS.commonSites.FR.IBS.GBR.TSI.NL"
 
 ##############################
 ### Exclude sites MAF <0.1 ###
 ##############################
-if [ "$chrID" == "chr6"]; #Zabaneh et al 2016 Scientific reports
-    then
-    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
-    --not-chr chr6 --from-bp 29691116 --to-bp 33054976 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - \
-    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - \
+if [ "$chrID" == "chr6" ]; #Zabaneh et al 2016 Scientific reports
+then
+    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
+    --not-chr chr6 --from-bp 29691116 --to-bp 33054976 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - \
+    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - \
     --keep ${wkingDir}/plink/indvs_to_keep.txt --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100
 else 
-    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
-    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - --keep ${wkingDir}/plink/indvs_to_keep.txt \
+    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
+    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - --keep ${wkingDir}/plink/indvs_to_keep.txt \
     --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100
 fi
 

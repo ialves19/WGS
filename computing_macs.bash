@@ -12,7 +12,7 @@
 ##
 ##
 ## This script needs to be launched with the following command:
-## for i in `seq 1 22`; do qsub computing_macs.bash chrX Z
+## for i in `seq 1 22`; do qsub computing_macs.bash chrX mac
 ## done
 ## z : is the specific mac
 ## 
@@ -20,6 +20,11 @@
 
 #setting the sart of the job
 res1=$(date +%s.%N)
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/commun/data/users/abihouee/miniconda3/pkgs/libgcc-4.8.5-1/lib
+
+r_scriptName="computing_discordant_REF_ANC.R"
+chmod +x ${HOME}/$r_scriptName
 
 chrID=$1
 macThreshold=$2
@@ -31,16 +36,28 @@ if [ ! -d "${wkingDir}/rare_by_dist" ];
 fi
 
 
-inputFolder="${wkingDir}/1000G"
+inputFolder="${wkingDir}/vcf_ancestral"
 outFolder="${wkingDir}/rare_by_dist"
-prefixName="merged.WGS.1000G"
+prefixName="20180323.FRENCHWGS.REF0002"
 #sufixName="onlysnps.downsampled"
-sufixName="PASS.FR.IBS.GBR.TSI"
+sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
 
 
 
-commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf --mac ${macThreshold} --max-mac ${macThreshold} \
---get-INFO GT --out ${outFolder}/FR.1000G.$chrID.mac${macThreshold}
+/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz --max-missing 1 --mac ${macThreshold} --max-mac ${macThreshold} \
+--recode --recode-INFO-all --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - --get-INFO AA --out ${outFolder}/${prefixName}.$chrID.mac${macThreshold}
+
+/commun/data/packages/R/R-3.1.1/bin/Rscript ${HOME}/$r_scriptName $chrID $macThreshold
+
+for file in ${outFolder}/dist_groups/*.txt; 
+do
+        dist_tag=`echo $file | cut -d$'/' -f7 | sed 's/.*_\([0-9]*_[0-9]*\).txt/\1/'`
+        echo $dist_tag
+        /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz --max-missing 1 --mac ${macThreshold} --max-mac ${macThreshold} \
+        --recode --recode-INFO-all --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - --exclude-positions ${outFolder}/${prefixName}.$chrID.mac${macThreshold}.SNPsToRM \
+        --recode --recode-INFO-all --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --gzvcf - --keep $file --extract-FORMAT-info GT --out ${outFolder}/${prefixName}.$chrID.mac${macThreshold}.${dist_tag}
+done
+
 
 
 #timing the job

@@ -2,9 +2,9 @@
 
 #$ -S /bin/bash
 #$ -cwd
-#$ -N f2_CHRID
-#$ -o f2_o_CHRID
-#$ -e f2_e_CHRID
+#$ -N f2$JOB_ID
+#$ -o f2_o_$JOB_ID
+#$ -e f2_e_$JOB_ID
 #$ -m a
 #$ -M Isabel.Alves@univ-nantes.fr
 
@@ -23,7 +23,7 @@
 res1=$(date +%s.%N)
 
 #echo $HOME
-inputFolder="/mnt/beegfs/ialves"
+inputFolder="/mnt/beegfs/ialves/1000G"
 outputFolder="/mnt/beegfs/ialves"
 echo "Working folder: $inputFolder"
 echo ""
@@ -37,7 +37,9 @@ fi
 #loading VCFtools
 #module load vcftools/0.1.10
 
-tag1=`echo $1 | sed 's/\(.*\).recode.vcf/\1/'`
+# this keeps the full name of the file without the .vcf. 
+# if one wants to rm the recode it shoud be .recode.vcf
+tag1=`echo $1 | sed 's/\(.*\).vcf/\1/'`
 echo "Working file: $tag1"
 echo ""
 tag2=`echo $2 | sed 's/\(.*\).txt/\1/'`
@@ -58,11 +60,13 @@ rm ${outputFolder}/fTwo/$tag1.$tag2.mac2G.recode.vcf
 for pop in `ls ${outputFolder}/pop_fTwo/*.txt`; 
 	do 
 	tmpTag=`echo $pop | cut -d$'/' -f6 | sed 's/\(.*\).txt/\1/'`;
-	/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/fTwo/$tag1.$tag2.mac2G.noDouble.recode.vcf --keep $pop --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - --counts2 --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G.noDouble.$tmpTag
-	done
+	/commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${outputFolder}/fTwo/$tag1.$tag2.mac2G.noDouble.recode.vcf --keep $pop --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - --counts2 --out ${outputFolder}/fTwo/$tag1.$tag2.mac2G.noDouble.$tmpTag
 
-rm ${inputFolder}/fTwo/$tag1.$tag2.mac2G.noDouble.recode.vcf
+done
 
+rm ${outputFolder}/fTwo/$tag1.$tag2.mac2G.noDouble.recode.vcf
+rm *.exclude
+rm *.singletons
 
 #timing the job
 res2=$(date +%s.%N)
