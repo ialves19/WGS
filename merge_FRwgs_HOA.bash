@@ -24,6 +24,7 @@
 res1=$(date +%s.%N)
 
 wkingDir="/mnt/beegfs/ialves"
+methodType="pca"
 
 if [ ! -d "${wkingDir}/HumanOrigins/plink" ]; 
     then
@@ -35,6 +36,8 @@ outputFolder="${wkingDir}/HumanOrigins/plink"
 
 prefixName="20181108.ISABELLRECAL.snps.vcf"
 pedFileName="FR_WGs_calledHOA"
+outPrefix="FRwgs_HOAlazaridis"
+
 
 ##########################
 ### Convert VCF to PED ###
@@ -73,9 +76,7 @@ $HOME/EIG-6.1.4/bin/mergeit -p /mnt/beegfs/ialves/HumanOrigins/parFile_mergeEIG.
 ############################
 ### Convert .geno to BED ###
 ############################
-$HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.XXXXX #finish
-
-
+$HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.mergedPACKEDANCESTRYMAP.PARCKEDPED #finish
 
 
 #######################
@@ -83,11 +84,43 @@ $HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.XXXXX #finis
 #######################
 # Hardy-Weinberg equilibrum at 1e-04, --bfile to specify that the input data are in binary format
 # Réduction aux SNP indépendants en deux étapes (LD pruning)
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --indep-pairwise 50 5 0.5 --out ${outputFolder}/plink.$chrID
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --r2 --ld-window 10 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/FRwgs_HOAlazaridis --indep-pairwise 50 5 0.5 --out ${outputFolder}/plink.$chrID
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/FRwgs_HOAlazaridis --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/FRwgs_HOAlazaridis.pruned
+/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/FRwgs_HOAlazaridis.pruned --r2 --ld-window 10 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
+
+if [ "${methodType}" == "relatedness" ];
+    then
+    ###########################
+    ### IBS matrix creation ###
+    ###########################
+    # IBS summarizes if samples are related
+    /commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.all --genome --out ${outputFolder}/matriceIBS
+    cat ${outputFolder}/matriceIBS.genome | awk '$10 > 0.1' > ${outputFolder}/relatedSamples.txt
+
+elif [ "${methodType}" == "pca" ]; 
+    then
 
 
+    cp ${outputFolder}/${outPrefix}.pruned.fam ${outputFolder}/${outPrefix}.pruned.pedind 
+    #######################
+    ### Create inputfile###
+    #######################
+    (
+    echo "genotypename:  ${outputFolder}/${outPrefix}.pruned.bed"
+    echo "snpname:  ${outputFolder}/${outPrefix}.pruned.bim"
+    echo "indivname:  ${outputFolder}/${outPrefix}.pruned.pedind" #(<--- which is the XXX.fam renamed)
+    echo "evecoutname: ${outputFolder}/WGS.evec"
+    echo "evaloutname: ${outputFolder}/WGS.eval"
+    echo "deletesnpoutname: EIG_removed_SNPs"
+    echo "numoutevec: 10"
+    echo "fsthiprecision: YES"
+    ) > ${outputFolder}/smarpca.WGS.txt
+
+    #######################
+    ### PCA ###
+    #######################
+    /commun/data/users/ialves/EIG-6.1.4/bin/smartpca -p ${outputFolder}/smarpca.WGS.txt > ${outputFolder}/logfile.txt
+fi
 
 #timing the job
 res2=$(date +%s.%N)
