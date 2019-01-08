@@ -49,9 +49,6 @@ outPrefix="FRwgs_HOAlazaridis"
 --make-bed --out ${outputFolder}/${pedFileName}_clean
 
 
-
-
-
 #convert PACKEDANCESTRY into BED
 $HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.PACKEDANCESTRYMAP.PACKEDPED
 #change coding of mt DNA from 90 to mt 
