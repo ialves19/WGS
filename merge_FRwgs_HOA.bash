@@ -23,7 +23,7 @@
 #setting the sart of the job
 res1=$(date +%s.%N)
 
-wkingDir="/mnt/beegfs/ialves"
+wkingDir="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel"
 methodType="pca"
 
 if [ ! -d "${wkingDir}/HumanOrigins/plink" ]; 
@@ -35,45 +35,57 @@ fi
 outputFolder="${wkingDir}/HumanOrigins/plink"
 
 prefixName="20181108.ISABELLRECAL.snps.vcf"
-pedFileName="FR_WGs_calledHOA"
-outPrefix="FRwgs_HOAlazaridis"
+pedFileName="FR_WGs_zoom_calledHOA"
+outPrefix="FRwgs_HOA_zoom_maf0.01"
 
+module load plink/1.90
+module load vcftools/0.1.15
 
 ##########################
 ### Convert VCF to PED ###
+### French WGS         ###
 ##########################
 #converting vcf into BED file by considering half calls as missing data
-/commun/data/packages/plink/plink-1.9.0/plink --vcf 20181108.ISABELLRECAL.snps.vcf --vcf-filter --vcf-half-call missing --make-bed --out ${outputFolder}/$pedFileName
+plink --vcf 20181108.ISABELLRECAL.snps.vcf --vcf-filter --vcf-half-call missing --make-bed --out ${outputFolder}/$pedFileName
+#same but with sample selection
+vcftools --vcf 20181108.ISABELLRECAL.snps.vcf --keep indTags_westeurZoom.txt --recode --out ${wkingDir}/HumanOrigins/tmp_vcf
+plink --vcf ${wkingDir}/HumanOrigins/tmp_vcf.recode.vcf -vcf-filter --vcf-half-call missing --make-bed --out ${outputFolder}/$pedFileName
+
 #removing long LD regions listed in Price et al 2008
-/commun/data/packages/plink/plink-1.9.0/plink -bfile ${outputFolder}/$pedFileName --exclude range /mnt/beegfs/ialves/HumanOrigins/regions_longLD_toExclude.txt \
+plink -bfile ${outputFolder}/$pedFileName --exclude range $wkingDir/HumanOrigins/regions_longLD_toExclude.txt \
 --make-bed --out ${outputFolder}/${pedFileName}_clean
+cat ${outputFolder}/FR_WGs_zoom_calledHOA_clean.bim | awk '{if($2 ~"."){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/FR_WGs_zoom_calledHOA_clean.bis.bim
 
 
+
+##########################
+### Treating HOA chip  ###
+###                    ###
 #convert PACKEDANCESTRY into BED
-$HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.PACKEDANCESTRYMAP.PACKEDPED
+$HOME/EIG-6.1.4/bin/convertf -p ${wkingDir}/HumanOrigins/par.PACKEDANCESTRYMAP.PACKEDPED
 #change coding of mt DNA from 90 to mt 
 sed 's/^90/mt/g' HOA.bim > HOA_recoded.bim
 #keeping only autosomes in the HOA
-/commun/data/packages/plink/plink-1.9.0/plink -bfile /mnt/beegfs/ialves/HumanOrigins/plink/HOA --autosome --recode --make-bed --out /mnt/beegfs/ialves/HumanOrigins/plink/HOA_auto
+plink -bfile ${wkingDir}/HumanOrigins/plink/HOA --autosome --recode --make-bed --out ${wkingDir}/HumanOrigins/plink/HOA_auto
 #keeping western eurasian/northern african samples
-/commun/data/packages/plink/plink-1.9.0/plink -bfile /mnt/beegfs/ialves/HumanOrigins/plink/HOA_auto --keep-fam ${wkingDir}/HumanOrigins/westeurasians_PCA_HOA.txt --make-bed --out /mnt/beegfs/ialves/HumanOrigins/plink/HOA_westEur
+plink -bfile ${wkingDir}/HumanOrigins/plink/HOA_auto --keep-fam ${wkingDir}/HumanOrigins/westeuropeans_zoom_PCA_HOA.txt --make-bed --out ${wkingDir}/HumanOrigins/plink/HOA_westEur_zoom
 #removing long LD regions listed in Price et al 2008
-/commun/data/packages/plink/plink-1.9.0/plink -bfile /mnt/beegfs/ialves/HumanOrigins/plink/HOA_westEur --exclude range /mnt/beegfs/ialves/HumanOrigins/regions_longLD_toExclude.txt \
---make-bed --out /mnt/beegfs/ialves/HumanOrigins/plink/HOA_westEur_clean
+plink -bfile ${wkingDir}/HumanOrigins/plink/HOA_westEur_zoom --exclude range ${wkingDir}/HumanOrigins/regions_longLD_toExclude.txt \
+--make-bed --out ${wkingDir}/HumanOrigins/plink/HOA_westEur_zoom_clean
 #convert SNPs ids into chr:pos
-cat ${outputFolder}/HOA_westEur_clean.bim | awk '{if($2 ~"Affx"){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/HOA_westEur_clean.bis.bim
+cat ${outputFolder}/HOA_westEur_zoom_clean.bim | awk '{if($2 ~"Affx"){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/HOA_westEur_zoom_clean.bis.bim
 
 ########################################################
 ### Convert PED to PACKEDANCESTRY and MERGE DATASETS ###
 ########################################################
-$HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.PACKEDPED.PACKEDANCESTRYMAP.FRwgs
-$HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.PACKEDPED.PACKEDANCESTRYMAP.HOA
-$HOME/EIG-6.1.4/bin/mergeit -p /mnt/beegfs/ialves/HumanOrigins/parFile_mergeEIG.par
+$HOME/EIG-6.1.4/bin/convertf -p ${wkingDir}/HumanOrigins/par.PACKEDPED.PACKEDANCESTRYMAP.FRwgs
+$HOME/EIG-6.1.4/bin/convertf -p ${wkingDir}/HumanOrigins/par.PACKEDPED.PACKEDANCESTRYMAP.HOA
+$HOME/EIG-6.1.4/bin/mergeit -p ${wkingDir}/HumanOrigins/parFile_mergeEIG.par
 
 ############################
 ### Convert .geno to BED ###
 ############################
-$HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.mergedPACKEDANCESTRYMAP.PARCKEDPED #finish
+$HOME/EIG-6.1.4/bin/convertf -p ${wkingDir}/HumanOrigins/par.mergedPACKEDANCESTRYMAP.PARCKEDPED #finish
 
 
 #######################
@@ -81,9 +93,11 @@ $HOME/EIG-6.1.4/bin/convertf -p /mnt/beegfs/ialves/HumanOrigins/par.mergedPACKED
 #######################
 # Hardy-Weinberg equilibrum at 1e-04, --bfile to specify that the input data are in binary format
 # Réduction aux SNP indépendants en deux étapes (LD pruning)
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/FRwgs_HOAlazaridis --indep-pairwise 50 5 0.5 --out ${outputFolder}/plink.$chrID
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/FRwgs_HOAlazaridis --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/FRwgs_HOAlazaridis.pruned
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/FRwgs_HOAlazaridis.pruned --r2 --ld-window 10 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
+plink --bfile ${outputFolder}/FRwgs_HOA_zoom --maf 0.01 --make-bed --out ${outputFolder}/FRwgs_HOA_zoom_maf0.01
+
+plink --bfile ${outputFolder}/FRwgs_HOA_zoom_maf0.01 --indep-pairwise 50 5 0.1 --out ${outputFolder}/plink.$chrID
+plink --bfile ${outputFolder}/FRwgs_HOA_zoom_maf0.01 --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/FRwgs_HOA_zoom_maf0.01.pruned
+plink --bfile ${outputFolder}/FRwgs_HOA_zoom_maf0.01.pruned --r2 --ld-window 10 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
 
 if [ "${methodType}" == "relatedness" ];
     then
@@ -116,7 +130,7 @@ elif [ "${methodType}" == "pca" ];
     #######################
     ### PCA ###
     #######################
-    /commun/data/users/ialves/EIG-6.1.4/bin/smartpca -p ${outputFolder}/smarpca.WGS.txt > ${outputFolder}/logfile.txt
+    /sandbox/users/alves-i/EIG-6.1.4/bin/smartpca -p ${outputFolder}/smarpca.WGS.txt > ${outputFolder}/logfile.txt
 fi
 
 #timing the job
