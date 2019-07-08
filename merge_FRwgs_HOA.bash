@@ -73,7 +73,7 @@ plink -bfile ${wkingDir}/HumanOrigins/plink/HOA_auto --keep-fam ${wkingDir}/Huma
 plink -bfile ${wkingDir}/HumanOrigins/plink/HOA_westEur_zoom --exclude range ${wkingDir}/HumanOrigins/regions_longLD_toExclude.txt \
 --make-bed --out ${wkingDir}/HumanOrigins/plink/HOA_westEur_zoom_clean
 #convert SNPs ids into chr:pos
-cat ${outputFolder}/HOA_westEur_zoom_clean.bim | awk '{if($2 ~"Affx"){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/HOA_westEur_zoom_clean.bis.bim
+cat ${outputFolder}/HOA_westEur_zoom_clean.bim | awk '{if($2 ~"Affx" || $2 ~"rs"){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/HOA_westEur_zoom_clean.bis.bim
 
 ########################################################
 ### Convert PED to PACKEDANCESTRY and MERGE DATASETS ###
