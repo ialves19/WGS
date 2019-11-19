@@ -142,18 +142,18 @@ elif [ "${methodType}" == "pca" ];
     echo "genotypename:  ${outputFolder}/${prefixName}.${sufixName}.all.bed"
     echo "snpname:  ${outputFolder}/${prefixName}.${sufixName}.all.bim"
     echo "indivname:  ${outputFolder}/${prefixName}.${sufixName}.all.pedind" #(<--- which is the XXX.fam renamed)
-    echo "evecoutname: ${outputFolder}/$folderSmartPCAout/WGS.evec"
-    echo "evaloutname: ${outputFolder}/$folderSmartPCAout/WGS.eval"
+    echo "evecoutname: $folderSmartPCAout/WGS.evec"
+    echo "evaloutname: $folderSmartPCAout/WGS.eval"
     echo "deletesnpoutname: EIG_removed_SNPs"
     echo "numoutevec: 10"
     echo "fsthiprecision: YES"
-    ) > ${outputFolder}/$folderSmartPCAout/smarpca.WGS.txt
+    ) > $folderSmartPCAout/smarpca.WGS.txt
 
     
     #######################
     ### PCA ###
     #######################
-    /sandbox/users/alves-i/EIG-6.1.4/bin/smartpca -p ${outputFolder}/$folderSmartPCAout/smarpca.WGS.txt > ${outputFolder}/$folderSmartPCAout/logfile.txt
+    /sandbox/users/alves-i/EIG-6.1.4/bin/smartpca -p $folderSmartPCAout/smarpca.WGS.txt > $folderSmartPCAout/logfile.txt
 
 fi        
 
