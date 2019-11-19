@@ -1,18 +1,10 @@
 #!/bin/bash
 
-#$ -S /bin/bash
-#$ -cwd
-#$ -N pca_$JOB_ID
-#$ -o pca_o_$JOB_ID
-#$ -e pca_e_$JOB_ID
-#$ -m a
-#$ -M Isabel.Alves@univ-nantes.fr
-
 ##################### RE-WRITE
 ##
 ##
 ## This script needs to be launched with the following command:
-## for i in `seq 1 22`; do qsub plink_compute_pca.bash chrX
+## for i in `seq 1 22`; do qsub plink_compute_pca.bash <chrX> <name of the individual file> <sufix for the output>
 ## done
 #####################
 
@@ -20,62 +12,90 @@
 #setting the sart of the job
 res1=$(date +%s.%N)
 
+module load vcftools plink
+
 chrID=$1
-wkingDir="/mnt/beegfs/ialves"
-inputFolder="/mnt/beegfs/ialves/1000G"
+samplesTOKeepFile=$2
+sufOutput=$3
+minMAF=true
+wkingDir="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel"
+inputFolder="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel/vcf_ancestral"
+outputFolder="${wkingDir}/plink/pca"
+prefixName="20180323.FRENCHWGS.REF0002"
+#sufixName="onlysnps.downsampled"
+sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
 
 if [ ! -d "${wkingDir}/plink" ]; 
     then
         mkdir ${wkingDir}/plink
 fi
 
-if [ ! -d "${wkingDir}/pca" ]; 
+if [ ! -d "${wkingDir}/plink/pca" ]; 
     then
         mkdir ${wkingDir}/plink/pca
 fi
 
 
-outputFolder="${wkingDir}/plink/pca"
-
-prefixName="merged.WGS.FR_1000G_goNL"
-#sufixName="onlysnps.downsampled"
-sufixName="PASS.commonSites.FR.IBS.GBR.TSI.NL"
-
 ##############################
 ### Exclude sites MAF <0.1 ###
 ##############################
-if [ "$chrID" == "chr6" ]; #Zabaneh et al 2016 Scientific reports
+if [ "$minMAF" == true ]; 
 then
-    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
-    --not-chr chr6 --from-bp 29691116 --to-bp 33054976 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - \
-    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - \
-    --keep ${wkingDir}/plink/indvs_to_keep.txt --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100
-else 
-    /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf \
-    --maf 0.01 --recode --stdout | /commun/data/packages/vcftools/vcftools_0.1.12b/bin/vcftools --vcf - --keep ${wkingDir}/plink/indvs_to_keep.txt \
-    --recode --out ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100
-fi
+    if [ "$chrID" == "chr6" ]; #Zabaneh et al 2016 Scientific reports
+    then
 
+        prefTmp=`echo $prefixName | cut -d$'.' -f2`
+        outputFile=$prefTmp.$chrID.maf.10.maxmaf.01.$sufOutput
+
+        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
+        --bed /sandbox/users/alves-i/chr6_excludeWindow.txt --recode --stdout | vcftools --gzvcf - \
+        --max-maf 0.10 --maf 0.01 --recode --stdout | vcftools --gzvcf - --keep ${wkingDir}/plink/$samplesTOKeepFile --recode --out ${inputFolder}/${outputFile}
+    else 
+        prefTmp=`echo $prefixName | cut -d$'.' -f2`
+        outputFile=$prefTmp.$chrID.maf.10.maxmaf.01.$sufOutput
+
+        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
+        --max-maf 0.10 --maf 0.01 --recode --stdout | vcftools --gzvcf - --keep ${wkingDir}/plink/$samplesTOKeepFile \
+        --recode --out ${inputFolder}/${outputFile}
+    fi
+else
+    if [ "$chrID" == "chr6" ]; #Zabaneh et al 2016 Scientific reports
+    then
+        prefTmp=`echo $prefixName | cut -d$'.' -f2`
+        outputFile=$prefTmp.$chrID.maf.10.$sufOutput
+
+        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
+        --bed /sandbox/users/alves-i/chr6_excludeWindow.txt --recode --stdout | vcftools --gzvcf - \
+        --maf 0.10 --recode --stdout | vcftools --gzvcf - \
+        --keep ${wkingDir}/plink/$samplesTOKeepFile --recode --out ${inputFolder}/${outputFile}
+    else 
+        prefTmp=`echo $prefixName | cut -d$'.' -f2`
+        outputFile=$prefTmp.$chrID.maf.10.$sufOutput
+
+        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
+        --maf 0.10 --recode --stdout | vcftools --gzvcf - --keep ${wkingDir}/plink/$samplesTOKeepFile \
+        --recode --out ${inputFolder}/${outputFile}
+    fi
+fi 
 ##########################
 ### Convert VCF to BED ###
 ##########################
-/commun/data/packages/plink/plink-1.9.0/plink --vcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.maf0.01.subset100.recode.vcf --vcf-filter \
---make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}
+plink --vcf ${inputFolder}/${outputFile}.recode.vcf --vcf-filter --make-bed --out ${outputFolder}/${outputFile}
 
 ##################################
 ### Replace "." with CHROM:POS ###
 ##################################
-cat ${outputFolder}/${prefixName}.$chrID.${sufixName}.bim | awk '{if($2 =="."){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/${prefixName}.$chrID.${sufixName}.bis.bim
-mv ${outputFolder}/${prefixName}.$chrID.${sufixName}.bis.bim ${outputFolder}/${prefixName}.$chrID.${sufixName}.bim
+cat ${outputFolder}/${outputFile}.bim | awk '{if($2 =="."){OFS="\t";print $1,$1":"$4,$3,$4,$5,$6}else{print $0}}' > ${outputFolder}/${outputFile}.bis.bim
+mv ${outputFolder}/${outputFile}.bis.bim ${outputFolder}/${outputFile}.bim
 
 #######################
 ### Quality control ###
 #######################
 # Hardy-Weinberg equilibrum at 1e-04, --bfile to specify that the input data are in binary format
 # Réduction aux SNP indépendants en deux étapes (LD pruning)
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --indep-pairwise 50 5 0.5 --out ${outputFolder}/plink.$chrID
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --r2 --ld-window 10 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
+plink --bfile ${outputFolder}/${outputFile} --indep-pairwise 50 5 0.5 --out ${outputFolder}/plink.$chrID
+plink --bfile ${outputFolder}/${outputFile} --extract ${outputFolder}/plink.$chrID.prune.in --make-bed --out ${outputFolder}/${outputFile}.pruned
+#plink --bfile ${outputFolder}/${outputFile}.pruned --r2 --ld-window 10 --ld-window-kb 10000 --ld-window-r2 0.5 --out ${outputFolder}/ld.$chrID
 
 
 

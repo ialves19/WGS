@@ -14,7 +14,7 @@
 ## This script needs to be launched with the following command:
 ## 
 ## 
-## qsub plink_merging_files.bash chr1 relatedness/pca
+## qsub plink_merging_files.bash <input file no EXT> relatedness/pca wkdir inputDir
 ## 
 #####################
 
@@ -22,11 +22,23 @@
 #setting the sart of the job
 res1=$(date +%s.%N)
 
-chrID=$1
-methodType=$2
+module load plink
 
-wkingDir="/mnt/beegfs/ialves"
-inputFolder="/mnt/beegfs/ialves/vcf_ancestral"
+inFile=$1
+methodType=$2
+wkingDir=$3
+inputFolder=$4
+
+inFile="FRENCHWGS.chr1.maf.10.maxmaf.01.191119"
+methodType="pca"
+wkingDir="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel"
+inputFolder="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel/plink/pca"
+
+chrID=`echo $inFile | sed 's/.*\([chr]\{3\}[0-9]\{1,2\}\).*/\1/'`
+prefixName=`echo $inFile | sed -e "s/^\(.*\)\.$chrID.*/\1/"`
+#sufixName="onlysnps.downsampled"
+sufixName=`echo $inFile | sed -e "s/.*.$chrID.\(.*\)/\1/"`
+
 
 if [ ! -d "${wkingDir}/plink" ]; 
     then
@@ -41,26 +53,28 @@ if [ "$methodType" == "relatedness" ];
             mkdir ${wkingDir}/plink/relatedness
             outputFolder="${wkingDir}/plink/relatedness"
             echo "Mode: $methodType" 
+        else
+            outputFolder="${wkingDir}/plink/relatedness"
+            echo "Mode: $methodType" 
     fi
 elif [ "$methodType" == "pca" ];
     then 
-    if [ ! -d "${wkingDir}/pca" ]; 
+    if [ ! -d "${wkingDir}/plink/pca" ]; 
         then
             mkdir ${wkingDir}/plink/pca
             outputFolder="${wkingDir}/plink/pca"
             echo "Mode: $methodType" 
+    else 
+            outputFolder="${wkingDir}/plink/pca"
+            echo "Mode: $methodType"    
     fi
 fi
 
 
-prefixName="20180323.FRENCHWGS.REF0002"
-#sufixName="onlysnps.downsampled"
-sufixName="onlysnps.MQ.30.mapRmved.AA.hwe1e4.maxmiss.90"
-
 for i in `seq 1 22`;
 do
-    fileName=`ls ${outputFolder}/*chr${i}.*.pruned.bed`
-    echo $fileName
+    fileName=`ls ${outputFolder}/${prefixName}.chr${i}.${sufixName}.bed`
+    #echo $fileName
     prefixFName=`echo $fileName | sed 's/\(.*\).bed/\1/'`
     echo $prefixFName
 
@@ -72,15 +86,10 @@ rm ${outputFolder}/fileList_tmp.txt
 ##########################
 ### Merge all files    ###
 ##########################
-/commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${outputFolder}/fileList.txt \
---make-bed --keep-allele-order --out ${outputFolder}/${prefixName}.all
+plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${outputFolder}/fileList.txt \
+--make-bed --keep-allele-order --out ${outputFolder}/${prefixName}.${sufixName}.all
 
-#rm ${outputFolder}/ld.chr*.*
-#rm ${outputFolder}/plink.chr*.*
-# rm ${outputFolder}/*hwe1e4.maxmiss.90.bed
-# rm ${outputFolder}/*hwe1e4.maxmiss.90.bim
-# rm ${outputFolder}/*hwe1e4.maxmiss.90.fam
-# rm ${outputFolder}/*hwe1e4.maxmiss.90.log
+rm ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned.*
 
 if [ "${methodType}" == "relatedness" ];
     then
@@ -88,31 +97,63 @@ if [ "${methodType}" == "relatedness" ];
     ### IBS matrix creation ###
     ###########################
     # IBS summarizes if samples are related
-    /commun/data/packages/plink/plink-1.9.0/plink --bfile ${outputFolder}/${prefixName}.all --genome --out ${outputFolder}/matriceIBS
+    plink --bfile ${outputFolder}/${prefixName}.all --genome --out ${outputFolder}/matriceIBS
     cat ${outputFolder}/matriceIBS.genome | awk '$10 > 0.1' > ${outputFolder}/relatedSamples.txt
 
 elif [ "${methodType}" == "pca" ]; 
     then
 
-    cp ${outputFolder}/${prefixName}.all.fam ${outputFolder}/${prefixName}.all.pedind 
+    cp ${outputFolder}/${prefixName}.${sufixName}.all.fam ${outputFolder}/${prefixName}.${sufixName}.all.pedind 
+    d=$(date +%Y-%m-%d)
+    echo "$d"
+    COUNT=0; 
+    while true; 
+    do 
+        if [ "$COUNT" -eq 0 ]; 
+        then 
+            if [ ! -d "${outputFolder}/$d" ]; 
+            then 
+                echo "folder: ${outputFolder}/$d doesnt exist"; 
+                mkdir "${outputFolder}/$d"; 
+                folderSmartPCAout="${outputFolder}/$d";
+                break; 
+            else 
+                echo "folder: ${outputFolder}/$d already exists"; 
+                ((COUNT++));
+            fi 
+        else 
+            if [ ! -d "${outputFolder}/$d_$COUNT" ]; 
+            then 
+                echo "folder: ${outputFolder}/${d}_$COUNT doesnt exist"; 
+                mkdir "${outputFolder}/${d}_$COUNT"; 
+                folderSmartPCAout="${outputFolder}/${d}_$COUNT";
+                break; 
+            else 
+                echo "folder: ${outputFolder}/${d}_$COUNT already exists";
+                ((COUNT++)); 
+            fi; 
+        fi; 
+    done
+
     #######################
     ### Create inputfile###
     #######################
     (
-    echo "genotypename:  ${outputFolder}/${prefixName}.all.bed"
-    echo "snpname:  ${outputFolder}/${prefixName}.all.bim"
-    echo "indivname:  ${outputFolder}/${prefixName}.all.pedind" #(<--- which is the XXX.fam renamed)
-    echo "evecoutname: ${outputFolder}/WGS.evec"
-    echo "evaloutname: ${outputFolder}/WGS.eval"
+    echo "genotypename:  ${outputFolder}/${prefixName}.${sufixName}.all.bed"
+    echo "snpname:  ${outputFolder}/${prefixName}.${sufixName}.all.bim"
+    echo "indivname:  ${outputFolder}/${prefixName}.${sufixName}.all.pedind" #(<--- which is the XXX.fam renamed)
+    echo "evecoutname: ${outputFolder}/$folderSmartPCAout/WGS.evec"
+    echo "evaloutname: ${outputFolder}/$folderSmartPCAout/WGS.eval"
     echo "deletesnpoutname: EIG_removed_SNPs"
     echo "numoutevec: 10"
     echo "fsthiprecision: YES"
-    ) > ${outputFolder}/smarpca.WGS.txt
+    ) > ${outputFolder}/$folderSmartPCAout/smarpca.WGS.txt
 
+    
     #######################
     ### PCA ###
     #######################
-    /commun/data/users/ialves/EIG-6.1.4/bin/smartpca -p ${outputFolder}/smarpca.WGS.txt > ${outputFolder}/logfile.txt
+    /sandbox/users/alves-i/EIG-6.1.4/bin/smartpca -p ${outputFolder}/$folderSmartPCAout/smarpca.WGS.txt > ${outputFolder}/$folderSmartPCAout/logfile.txt
 
 fi        
 

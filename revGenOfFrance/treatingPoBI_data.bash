@@ -262,13 +262,18 @@ else
     #remove duplicates
     plink -bfile ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5 --list-duplicate-vars --out ${wkingDir}/${outputFName}_to_exclude
     plink -bfile ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5 --exclude ${wkingDir}/${outputFName}_to_exclude.dupvar --keep-allele-order --make-bed --out ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup_tmp
-    grep -v "^$chrID" ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup_tmp.bim | cut -d$'\t' -f2 > ${wkingDir}/noChromMatch_chr$chrID.exclude
-    plink -bfile ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup_tmp --exclude ${wkingDir}/noChromMatch_chr$chrID.exclude --keep-allele-order --make-bed --out ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup
+    
+    #Deprecated. the following steps need to be removed as we are not using the script update_build.sh provided in https://www.well.ox.ac.uk/~wrayner/strand/index.html
+    # grep -v "^$chrID" ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup_tmp.bim | cut -d$'\t' -f2 > ${wkingDir}/noChromMatch_chr$chrID.exclude
+    # plink -bfile ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup_tmp --exclude ${wkingDir}/noChromMatch_chr$chrID.exclude --keep-allele-order --make-bed --out ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup
+    
     #remove sites for which none of the alleles is the one in the reference. 
     #getting the ref allele 
-    # grep ^$chrID ${wkingDir}/${outputFName}_rec_strand_hwe1e-5_noDup.bim | awk '{printf("chr%s:%s-%s\n", $1,$4,$4);}' | while read P; do samtools faidx $pathToRefFasta ${P}; done > ${wkingDir}/referenceAllele_chr${chrID}_hg19.out
-    # #checking whether the ref is one of the alleles in the bim file
-    # Rscript --vanilla checking_matchWRefhg19.R ${wkingDir} ${outputFName}_rec_strand_hwe1e-5_noDup.bim ${pathToRefFasta} $chrID
+    grep ^$chrID ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup.bim | awk '{printf("chr%s:%s-%s\n", $1,$4,$4);}' | while read P; do samtools faidx $pathToRefFasta ${P}; done > ${wkingDir}/referenceAllele_chr${chrID}_hg19.out
+    #checking whether the ref is one of the alleles in the bim file
+    Rscript --vanilla checking_matchWRefhg19.R ${wkingDir} ${outputFName}_rec_allTOP_strand_hwe1e-5_noDup.bim referenceAllele_chr${chrID}_hg19.out $chrID
+   
+    #cleaning up the folder
     rm ${wkingDir}/${outputFName}_rec.* ${wkingDir}/${outputFName}_rec_allTOP.* ${wkingDir}/${outputFName}_rec_allTOP_strand.* ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5.*
     rm ${wkingDir}/WTCCC2_POBI_illumina_calls_POBI_illumina_chr${chrID}.sample.subset
     rm ${wkingDir}/${outputFName}_rec_allTOP_strand_lift.* ${wkingDir}/${outputFName}_rec_allTOP_strand_hwe1e-5_noDup.log
