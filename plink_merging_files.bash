@@ -29,7 +29,7 @@ methodType=$2
 wkingDir=$3
 inputFolder=$4
 
-inFile="FRENCHWGS.chr1.maf.10.maxmaf.01.191119"
+inFile="FRENCHWGS.chr6.maf.10.201119.pruned"
 methodType="pca"
 wkingDir="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel"
 inputFolder="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel/plink/pca"
@@ -86,7 +86,7 @@ rm ${outputFolder}/fileList_tmp.txt
 ##########################
 ### Merge all files    ###
 ##########################
-plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned --merge-list ${outputFolder}/fileList.txt \
+plink --bfile ${outputFolder}/${prefixName}.$chrID.${sufixName} --merge-list ${outputFolder}/fileList.txt \
 --make-bed --keep-allele-order --out ${outputFolder}/${prefixName}.${sufixName}.all
 
 rm ${outputFolder}/${prefixName}.$chrID.${sufixName}.pruned.*
@@ -146,7 +146,6 @@ elif [ "${methodType}" == "pca" ];
     echo "evaloutname: $folderSmartPCAout/WGS.eval"
     echo "deletesnpoutname: EIG_removed_SNPs"
     echo "numoutevec: 10"
-    echo "fsthiprecision: YES"
     ) > $folderSmartPCAout/smarpca.WGS.txt
 
     

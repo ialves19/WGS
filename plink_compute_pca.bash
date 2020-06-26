@@ -12,12 +12,18 @@
 #setting the sart of the job
 res1=$(date +%s.%N)
 
-module load vcftools plink
+module load bcftools plink
 
 chrID=$1
 samplesTOKeepFile=$2
 sufOutput=$3
-minMAF=true
+# comment below
+chrID="chr6"
+samplesTOKeepFile="indvs_to_keep.txt"
+sufOutput="201119"
+##---
+
+minMAF=false
 wkingDir="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel"
 inputFolder="/sandbox/shares/mages/WGS_PREGO_Finistere_GAZEL/isabel/vcf_ancestral"
 outputFolder="${wkingDir}/plink/pca"
@@ -44,43 +50,43 @@ then
     if [ "$chrID" == "chr6" ]; #Zabaneh et al 2016 Scientific reports
     then
 
+        echo "Filtering for maf between .01 and .10 "
         prefTmp=`echo $prefixName | cut -d$'.' -f2`
-        outputFile=$prefTmp.$chrID.maf.10.maxmaf.01.$sufOutput
+        outputFile=$prefTmp.$chrID.maf.01.maxmaf.10.$sufOutput
 
-        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
-        --bed /sandbox/users/alves-i/chr6_excludeWindow.txt --recode --stdout | vcftools --gzvcf - \
-        --max-maf 0.10 --maf 0.01 --recode --stdout | vcftools --gzvcf - --keep ${wkingDir}/plink/$samplesTOKeepFile --recode --out ${inputFolder}/${outputFile}
+        bcftools view -Ou -S ${wkingDir}/plink/$samplesTOKeepFile ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz chr6:1-29691116 chr6:33054976-171115067 | \
+        bcftools view -Ov -q 0.01[:minor] -Q 0.10[:minor] -o ${inputFolder}/${outputFile}.vcf
     else 
+        echo "Filtering for maf between .01 and .10 "
         prefTmp=`echo $prefixName | cut -d$'.' -f2`
-        outputFile=$prefTmp.$chrID.maf.10.maxmaf.01.$sufOutput
+        outputFile=$prefTmp.$chrID.maf.01.maxmaf.10.$sufOutput
 
-        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
-        --max-maf 0.10 --maf 0.01 --recode --stdout | vcftools --gzvcf - --keep ${wkingDir}/plink/$samplesTOKeepFile \
-        --recode --out ${inputFolder}/${outputFile}
+        bcftools view -Ou -S ${wkingDir}/plink/$samplesTOKeepFile ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz | \
+        bcftools view -Ov -q 0.01[:minor] -Q 0.10[:minor] -o ${inputFolder}/${outputFile}.vcf
     fi
 else
     if [ "$chrID" == "chr6" ]; #Zabaneh et al 2016 Scientific reports
     then
+        echo "Filtering for maf > .10"
         prefTmp=`echo $prefixName | cut -d$'.' -f2`
         outputFile=$prefTmp.$chrID.maf.10.$sufOutput
 
-        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
-        --bed /sandbox/users/alves-i/chr6_excludeWindow.txt --recode --stdout | vcftools --gzvcf - \
-        --maf 0.10 --recode --stdout | vcftools --gzvcf - \
-        --keep ${wkingDir}/plink/$samplesTOKeepFile --recode --out ${inputFolder}/${outputFile}
+        bcftools view -Ou -S ${wkingDir}/plink/$samplesTOKeepFile ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz chr6:1-29691116 chr6:33054976-171115067 | \
+        bcftools view -Ov -q 0.10[:minor] -o ${inputFolder}/${outputFile}.vcf
     else 
+        echo "Filtering for maf > .10"
         prefTmp=`echo $prefixName | cut -d$'.' -f2`
         outputFile=$prefTmp.$chrID.maf.10.$sufOutput
 
-        vcftools --gzvcf ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz \
-        --maf 0.10 --recode --stdout | vcftools --gzvcf - --keep ${wkingDir}/plink/$samplesTOKeepFile \
-        --recode --out ${inputFolder}/${outputFile}
+        bcftools view -Ou -S ${wkingDir}/plink/$samplesTOKeepFile ${inputFolder}/${prefixName}.$chrID.${sufixName}.recode.vcf.gz | \
+        bcftools view -Ov -q 0.10[:minor] -o ${inputFolder}/${outputFile}.vcf
+
     fi
 fi 
 ##########################
 ### Convert VCF to BED ###
 ##########################
-plink --vcf ${inputFolder}/${outputFile}.recode.vcf --vcf-filter --make-bed --out ${outputFolder}/${outputFile}
+plink --vcf ${inputFolder}/${outputFile}.vcf --vcf-filter --make-bed --out ${outputFolder}/${outputFile}
 
 ##################################
 ### Replace "." with CHROM:POS ###
